@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Webcam Detection with Real-Time Location Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-200 min-h-screen flex flex-col items-center justify-center space-y-8">
+
+    <!-- Webcam Stream -->
+    <video id="webcam" width="640" height="480" autoplay></video>
+    <button id="startWebcam" class="mt-4 bg-blue-600 text-white py-2 px-4 rounded">Start Webcam</button>
+
+    <!-- Predictions Display -->
+    <div id="predictions">YOLO Predictions: N/A</div>
+    <div id="inference-speed">Inference Speed: N/Ams</div>
+
+    <!-- Location Display -->
+    <div id="location-info">Location: N/A</div>
+
+    <script>
+        const video = document.getElementById("webcam");
+        const startWebcamButton = document.getElementById("startWebcam");
+        const canvas = document.createElement("canvas");
+        canvas.width = video.width;
+        canvas.height = video.height;
+        const context = canvas.getContext("2d");
+        const locationInfo = document.getElementById("location-info");
+
+        // Webcam functionalities
+        startWebcamButton.addEventListener("click", async function () {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.play();
+        });
+
+        video.addEventListener('play', function () {
+            setInterval(async function () {
+                context.drawImage(video, 0, 0, video.width, video.height);
+                let imageData = canvas.toDataURL('image/jpeg');
+
+                let response = await fetch('/predict-webcam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "image": imageData })
+                });
+
+                let data = await response.json();
+                document.getElementById("predictions").innerText = "YOLO Predictions: " + data.class_names.join(", ");
+                document.getElementById("inference-speed").innerText = "Inference Speed: " + data.inference_speed;
+
+                // Draw bounding boxes
+                for (let box of data.bounding_boxes) {
+                    context.strokeStyle = "red";
+                    context.lineWidth = 3;
+                    context.strokeRect(box.x, box.y, box.width, box.height);
+                }
+            }, 1000);
+        });
+
+        // Geolocation functionalities
+        function startWatchingLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(displayLocation, showError, {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+            } else {
+                locationInfo.innerText = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function displayLocation(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            locationInfo.innerText = `Location: Latitude: ${lat.toFixed(5)}, Longitude: ${lon.toFixed(5)}`;
+        }
+
+        function showError(error) {
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    locationInfo.innerText = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    locationInfo.innerText = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    locationInfo.innerText = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    locationInfo.innerText = "An unknown error occurred.";
+                    break;
+            }
+        }
+
+        // Initiate geolocation tracking
+        startWatchingLocation();
+
+    </script>
+</body>
+
+</html>

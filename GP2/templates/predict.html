@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Predictions</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.0.12/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-200 min-h-screen flex flex-col items-center justify-center space-y-8">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl mb-4">YOLO Predictions</h1>
+        {% if detections %}
+        <ul class="list-decimal list-inside">
+            {% for class_name in detections %}
+            <li>{{ class_name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No objects detected.</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <p>Inference Speed: {{ speed }}ms</p>
+    </div>
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 class="text-xl mb-4"> Location</h2>
+        <p>Latitude: <span id="latitude">Fetching...</span></p>
+        <p>Longitude: <span id="longitude">Fetching...</span></p>
+    </div>
+
+    <script>
+        function updateLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(function (position) {
+                    document.getElementById('latitude').textContent = position.coords.latitude.toFixed(5);
+                    document.getElementById('longitude').textContent = position.coords.longitude.toFixed(5);
+                }, function (error) {
+                    console.error("Error Code = " + error.code + " - " + error.message);
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        // Call the function to start updating location
+        updateLocation();
+    </script>
+
+</body>
+
+</html>
